@@ -1,0 +1,44 @@
+name: Deploy Manager App Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    strategy:
+      matrix:
+        node-version: [14.x]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install firebase
+        run: npm i firebase-tools -g
+
+      - name: Install Frontend Dependencies
+        run: npm i
+
+      - name: Build Frontend
+        run: npm run build
+
+      - name: Create config.json
+        uses: jsdaniell/create-json@1.1.2
+        with:
+          name: 'config.json'
+          json: ${{ secrets.CONFIG_FRONT_APP }}
+          dir: './public'
+
+      - name: Set Project Firebase
+        run: firebase use ${{secrets.FIREBASE_PROJECT_ID}} --token ${{ secrets.FIREBASE_TOKEN }}
+    
+      - name: Clear Target
+        run: firebase target:clear hosting manager
+
+      - name: Set Target Deploy
+        run: firebase target:apply hosting manager ${{secrets.MANAGER_APP}}  --token ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: Deploy Hosting
+        run: firebase deploy --only hosting --token ${{ secrets.FIREBASE_TOKEN }}
